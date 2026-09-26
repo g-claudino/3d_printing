@@ -1,0 +1,15 @@
+{
+  "name": "layerworks",
+  "version": "1.0.0",
+  "description": "Browser-based generator for printable STL models: terrain, lithophanes, text, storage, mechanical and decorative parts.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test/mesh-check.cjs"
+  },
+  "devDependencies": {
+    "three": "0.147.0"
+  },
+  "license": "MIT"
+}
