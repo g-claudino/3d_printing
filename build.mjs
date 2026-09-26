@@ -11,8 +11,8 @@ const html = `<!doctype html>
 </head>
 <body>
 ${src('page.html')}
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
 <script>
 ${src('core.js')}
 ${src('models.js')}

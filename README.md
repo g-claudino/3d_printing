@@ -24,10 +24,10 @@ The status bar shows the model's size, triangle count, volume, roughly how much 
 
 ## Use it
 
-- **Online:** turn on GitHub Pages for this repository (Settings → Pages → Deploy from branch → `main` / root). The app will be at `https://<your-user>.github.io/layerworks/`.
-- **Offline:** download `index.html` and open it in Chrome, Edge or Firefox.
+- **Online:** turn on GitHub Pages for this repository (Settings → Pages → Deploy from branch → `main` / root). The app will be at `https://<your-user>.github.io/<repo>/`.
+- **Offline:** download the whole repo (or at least `index.html` and the `vendor/` folder next to it) and open `index.html` in Chrome, Edge or Firefox.
 
-Place search uses OpenStreetMap Nominatim, with Photon as a fallback. Elevation comes from the public [Terrarium tiles](https://registry.opendata.aws/terrain-tiles/) on AWS. Both need an internet connection. The other generators work offline once three.js has loaded.
+The 3D library (three.js) is vendored in `vendor/` rather than loaded from a CDN, so the app works even when a browser or network blocks third-party script hosts. Only two things need the internet: place search (OpenStreetMap Nominatim, with Photon as a fallback) and elevation tiles (the public [Terrarium tiles](https://registry.opendata.aws/terrain-tiles/) on AWS). Everything else — every generator, the 3D preview, STL export — works fully offline.
 
 ## Develop
 
@@ -45,6 +45,7 @@ npm test           # builds every parametric model and checks each mesh is close
 | `src/core.js` | Geometry: heightfield solids, involute gears, vases, STL and ZIP writers (no DOM) |
 | `src/models.js` | Model catalogue, parameters and build functions |
 | `src/app.js` | three.js viewport, controls and downloads |
+| `vendor/` | three.js and OrbitControls, vendored so the app doesn't depend on a CDN |
 
 Every mesh is exported as one or more closed shells, meaning each edge is shared by exactly two faces with opposite winding. Parametric parts are exported as overlapping shells, which slicers merge on import.
 
