@@ -275,4 +275,4 @@ function patternValue(kind,x,y,scale,lw){
   return 0;
 }
 
-if(typeof module!=='undefined')module.exports={TriBuf,heightfieldSolid,orientShell,signedVolume,boxTris,sampleIsland,sampleGrid,shapeTest,toSTL,zipOne,crc32,extrude,rrPath,polyPath,circlePath,ringTris,gearPoints,borePath,vaseTris,patternValue,transformTris};
+if(typeof module!=='undefined'&&module.exports)module.exports={TriBuf,heightfieldSolid,orientShell,signedVolume,boxTris,sampleIsland,sampleGrid,shapeTest,toSTL,zipOne,crc32,extrude,rrPath,polyPath,circlePath,ringTris,gearPoints,borePath,vaseTris,patternValue,transformTris};

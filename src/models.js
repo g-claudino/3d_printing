@@ -225,10 +225,18 @@ const MODELS=[
   else{ds=island();label='sample-island';badge=p.source==='map'?'Sample terrain · choose a place':p.source==='upload'?'Sample terrain · load a heightmap':'Sample terrain';}
   const size=p.size,cell=cellFor(p.detail,size,size),n=Math.round(size/cell),c=size/n;
   const uv=(i,j)=>{let u=i/n,v=1-j/n;if(ds.w>ds.h)u=.5+(u-.5)*ds.h/ds.w;else if(ds.h>ds.w)v=.5+(v-.5)*ds.w/ds.h;return[u,v];};
-  const E=new Float32Array((n+1)*(n+1)),sea=p.sea&&ds.metersWide&&p.source!=='upload';
+  const E=new Float32Array((n+1)*(n+1)),real=ds.metersWide&&p.source!=='upload',sea=p.sea&&real;
   let emin=Infinity,emax=-Infinity;
   for(let j=0;j<=n;j++)for(let i=0;i<=n;i++){
-    const [u,v]=uv(i,j);let e=sampleGrid(ds,u,v);if(sea)e=Math.max(e,0);E[j*(n+1)+i]=e;
+    const [u,v]=uv(i,j);let e=sampleGrid(ds,u,v);
+    /* A missing/void elevation tile decodes to a huge negative sentinel (~-32768 m). Left
+       unguarded, that single bad sample becomes emin and every other height gets computed
+       relative to it, inflating the whole model to hundreds of mm. No real land point on
+       Earth is below -500 m, so clamp real elevation data to that floor unconditionally —
+       "Flatten water" (below) is a separate, user-facing choice about sea level, at 0 m. */
+    if(real)e=Math.max(e,-500);
+    if(sea)e=Math.max(e,0);
+    E[j*(n+1)+i]=e;
     if(shapeTest(p.shape,i/n,j/n)){if(e<emin)emin=e;if(e>emax)emax=e;}
   }
   if(!isFinite(emin)){emin=0;emax=1;}
