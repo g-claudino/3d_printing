@@ -100,6 +100,20 @@ function lumGrid(src,nx,ny,crop){
   for(let j=0;j<H;j++)for(let i=0;i<W;i++){const k=((ny-j)*W+i)*4;L[j*W+i]=(0.2126*px[k]+0.7152*px[k+1]+0.0722*px[k+2])/255;}
   return L;
 }
+/* Backlit preview texture: brightness = how much light a lithophane's thickness would pass
+   at that point (thin = bright, thick = opaque/black), matching how it looks held to a light.
+   H is a (w×h) grid of thicknesses; texture rows run top-to-bottom in the same order as H. */
+function backlitTexture(H,w,h,minT,maxT){
+  const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  const x=cv.getContext('2d'),img=x.createImageData(w,h),span=Math.max(maxT-minT,1e-6);
+  for(let k=0;k<H.length;k++){
+    const b=Math.pow(clamp(1-(H[k]-minT)/span,0,1),0.8),v=Math.round(b*255),p=k*4;
+    img.data[p]=v;img.data[p+1]=v;img.data[p+2]=v;img.data[p+3]=255;
+  }
+  x.putImageData(img,0,0);
+  const tex=new THREE.CanvasTexture(cv);tex.flipY=false;tex.needsUpdate=true;
+  return tex;
+}
 function roundRectPath(x,X,Y,W,H,r){r=Math.max(0,Math.min(r,W/2,H/2));x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+W,Y,X+W,Y+H,r);x.arcTo(X+W,Y+H,X,Y+H,r);x.arcTo(X,Y+H,X,Y,r);x.arcTo(X,Y,X+W,Y,r);x.closePath();}
 
 /* ---------- Model catalogue ---------- */
@@ -272,7 +286,8 @@ const MODELS=[
   }
   const notes=[['Panel',`${fmt(Wt)} × ${fmt(Ht)} mm`],['Thickness',`${fmt(p.minT)} – ${fmt(maxT)} mm`],['Grid',`${nx} × ${ny} @ ${fmt(c,2)} mm`]];
   if(!circle&&p.curve>0)notes.push(['Arc radius',`${fmt(Wt/(p.curve*Math.PI/180))} mm`]);
-  return {shells:[tris],notes,badge:S.photo.sample?'Sample photo':null,file:'lithophane-'+slug(S.photo.name)};
+  const emissive=backlitTexture(H,W,ny+1,p.minT,maxT);
+  return {shells:[tris],notes,emissive,badge:S.photo.sample?'Sample photo':null,file:'lithophane-'+slug(S.photo.name)};
  }},
 {id:'relief',cat:'photo',name:'Photo relief',
  tip:'<b>Print tip:</b> bright areas rise highest. Print flat with 0.12 mm layers; a filament swap near the top makes the high points pop.',

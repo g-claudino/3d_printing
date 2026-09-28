@@ -19,7 +19,13 @@ S.photo={src:sampleScene(),name:'sample',sample:true};
 
 /* ---------- viewport ---------- */
 const canvas=$('#view'),stage=$('#stage');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+let webglOK=true,renderer;
+try{
+  renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+}catch(e){
+  webglOK=false;
+  renderer={setPixelRatio(){},setClearColor(){},setSize(){},render(){},dispose(){},domElement:canvas,capabilities:{getMaxAnisotropy:()=>1}};
+}
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setClearColor(0x000000,0);
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(32,1,1,8000);camera.up.set(0,0,1);camera.position.set(160,-260,190);
@@ -28,7 +34,7 @@ const hemi=new THREE.HemisphereLight(0xffffff,0x5d5a52,0.46);hemi.position.set(0
 const key=new THREE.DirectionalLight(0xffffff,0.52);key.position.set(-160,-240,320);scene.add(key);
 const fill=new THREE.DirectionalLight(0xffffff,0.2);fill.position.set(220,160,140);scene.add(fill);
 const mat=new THREE.MeshStandardMaterial({color:0x2F9C84,roughness:0.58,metalness:0.02});
-let mesh=null,plate=null,frame=null;
+let mesh=null,plate=null,frame=null,emissiveTex=null;
 const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim()||'#888';
 
 function buildPlate(){
@@ -58,6 +64,13 @@ function buildPlate(){
 function resize(){const r=stage.getBoundingClientRect();if(!r.width||!r.height)return;renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix();}
 new ResizeObserver(resize).observe(stage);
 (function loop(){requestAnimationFrame(loop);if(document.hidden)return;controls.update();renderer.render(scene,camera);})();
+if(!webglOK){
+  const note=document.createElement('div');
+  note.id='webglNote';
+  note.style.cssText='position:absolute;left:12px;right:12px;top:64px;background:var(--hud);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:13px;line-height:1.5;color:var(--ink)';
+  note.innerHTML='<strong>3D preview unavailable.</strong> WebGL is disabled in this browser. Every generator and the STL download still work — turning on WebGL (or trying another browser) brings back the live preview.';
+  stage.appendChild(note);
+}
 
 function fitCamera(b){
   const size=Math.max(b.x,b.y,b.z*1.3,24),d=size*2.05;
@@ -72,11 +85,22 @@ function applyResult(res){
   for(const s of res.shells){tris.set(s,o);o+=s.length;vol+=Math.abs(signedVolume(s));}
   let mnx=1e9,mny=1e9,mnz=1e9,mxx=-1e9,mxy=-1e9,mxz=-1e9;
   for(let i=0;i<tris.length;i+=3){const x=tris[i],y=tris[i+1],z=tris[i+2];if(x<mnx)mnx=x;if(x>mxx)mxx=x;if(y<mny)mny=y;if(y>mxy)mxy=y;if(z<mnz)mnz=z;if(z>mxz)mxz=z;}
+  let uv=null;
+  if(res.emissive){
+    uv=new Float32Array(tris.length/3*2);const sx=1/Math.max(mxx-mnx,1e-6),sy=1/Math.max(mxy-mny,1e-6);
+    for(let i=0,k=0;i<tris.length;i+=3,k+=2){uv[k]=(tris[i]-mnx)*sx;uv[k+1]=(tris[i+1]-mny)*sy;}
+  }
   const cx=(mnx+mxx)/2,cy=(mny+mxy)/2;
   for(let i=0;i<tris.length;i+=3){tris[i]-=cx;tris[i+1]-=cy;tris[i+2]-=mnz;}
   const b={x:mxx-mnx,y:mxy-mny,z:mxz-mnz};
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(tris,3));g.computeVertexNormals();
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(tris,3));
+  if(uv)g.setAttribute('uv',new THREE.BufferAttribute(uv,2));
+  g.computeVertexNormals();
   if(mesh){mesh.geometry.dispose();mesh.geometry=g;}else{mesh=new THREE.Mesh(g,mat);scene.add(mesh);}
+  if(emissiveTex){emissiveTex.dispose();emissiveTex=null;}
+  if(res.emissive){emissiveTex=res.emissive;mat.emissiveMap=emissiveTex;mat.emissive.set(0xffffff);mat.emissiveIntensity=1.2;}
+  else{mat.emissiveMap=null;mat.emissive.set(0x000000);mat.emissiveIntensity=0;}
+  mat.needsUpdate=true;
   S.tris=tris;S.bbox=b;S.fileBase=res.file||MODEL_BY_ID[S.model].id;
   if(S.needFit){fitCamera(b);S.needFit=false;}
   renderStats(b,tris.length/9,vol);
