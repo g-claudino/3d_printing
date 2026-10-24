@@ -171,9 +171,45 @@ function geomTris(g){
   if(gg!==g)gg.dispose();g.dispose();
   return orientShell(a.slice(0,n));
 }
-function extrude(shape,z0,depth,segs=32){
-  const g=new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:false,curveSegments:segs});
+function extrude(shape,z0,depth,segs=32,bevel=null){
+  const opts={depth,bevelEnabled:!!bevel,curveSegments:segs};
+  if(bevel){opts.bevelThickness=bevel.thickness;opts.bevelSize=bevel.size;opts.bevelSegments=bevel.segments||2;}
+  const g=new THREE.ExtrudeGeometry(shape,opts);
   g.translate(0,0,z0);return geomTris(g);
+}
+/* Rounded N-lobed outline (limaçon family): r(φ) = R·(1 + k·cos(n·φ)), φ measured from
+   +Y so the sharpest lobe lands at the bottom. n=3 gives a rounded-triangle guitar pick;
+   k near 1 pinches the corners toward a point (keep k well under 1 or lobes pinch off into
+   separate petals). Not used for n=1 — see teardropShape for the one-point pick outline. */
+function lobeShape(R,k,n,segs=240){
+  const s=new THREE.Shape();
+  let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+  for(let i=0;i<segs;i++){
+    const phi=i/segs*TAU,r=R*(1+k*Math.cos(n*phi)),x=r*Math.sin(phi),y=r*Math.cos(phi);
+    i?s.lineTo(x,y):s.moveTo(x,y);
+    if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;
+  }
+  s.closePath();
+  return {shape:s,minX,maxX,minY,maxY};
+}
+/* One-point teardrop outline (classic "351"-style guitar pick): a smooth power-law taper
+   from the tip up to the widest point, then a quarter-ellipse dome back to the top centre,
+   mirrored left/right. H = tip-to-top length; k in [0,1] controls how pinched the tip is
+   (0 = full, rounded tip; 1 = a sharp point) via the taper's exponent. */
+function teardropShape(H,k,segs=260){
+  const half=H/2,W=H*0.86,yMid=-half+0.60*H,E=lerp(0.55,2.3,clamp(k,0,1));
+  const N1=Math.max(8,Math.round(segs*0.46)),N2=Math.max(8,segs-N1);
+  const s=new THREE.Shape();let maxX=0,lx=0,ly=-half,started=false;
+  // A sharp tip (high E) packs many samples within a hair of x=0 near t→0; skip near-duplicate
+  // points so the extruded shape never gets a zero-area sliver triangle at the point.
+  const go=(x,y)=>{if(started&&Math.hypot(x-lx,y-ly)<0.01)return;started?s.lineTo(x,y):s.moveTo(x,y);started=true;lx=x;ly=y;};
+  go(0,-half);
+  for(let i=1;i<=N1;i++){const t=i/N1,y=-half+t*(yMid+half),x=(W/2)*Math.pow(t,E);go(x,y);if(x>maxX)maxX=x;}
+  for(let i=1;i<=N2;i++){const b=(i/N2)*(Math.PI/2),x=(W/2)*Math.cos(b),y=yMid+(half-yMid)*Math.sin(b);go(x,y);if(x>maxX)maxX=x;}
+  for(let i=N2-1;i>=0;i--){const b=(i/N2)*(Math.PI/2),x=-(W/2)*Math.cos(b),y=yMid+(half-yMid)*Math.sin(b);go(x,y);}
+  for(let i=N1-1;i>=1;i--){const t=i/N1,y=-half+t*(yMid+half),x=-(W/2)*Math.pow(t,E);go(x,y);}
+  s.closePath();
+  return {shape:s,minX:-maxX,maxX,minY:-half,maxY:half};
 }
 function rrPath(w,h,r,cx=0,cy=0,path=false){
   const s=path?new THREE.Path():new THREE.Shape();
@@ -275,4 +311,4 @@ function patternValue(kind,x,y,scale,lw){
   return 0;
 }
 
-if(typeof module!=='undefined'&&module.exports)module.exports={TriBuf,heightfieldSolid,orientShell,signedVolume,boxTris,sampleIsland,sampleGrid,shapeTest,toSTL,zipOne,crc32,extrude,rrPath,polyPath,circlePath,ringTris,gearPoints,borePath,vaseTris,patternValue,transformTris};
+if(typeof module!=='undefined'&&module.exports)module.exports={TriBuf,heightfieldSolid,orientShell,signedVolume,boxTris,sampleIsland,sampleGrid,shapeTest,toSTL,zipOne,crc32,extrude,rrPath,polyPath,circlePath,ringTris,gearPoints,borePath,vaseTris,patternValue,transformTris,lobeShape,teardropShape};

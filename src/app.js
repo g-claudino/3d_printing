@@ -185,6 +185,9 @@ function control(m,p,v){
   }else if(p.type==='textarea'){
     row.innerHTML=`<label for="${id}">${p.label}</label><textarea id="${id}" rows="2" spellcheck="false">${esc(v[p.id])}</textarea><span class="hint">Press Enter for a second line.</span>`;
     const t=row.querySelector('textarea');t.oninput=()=>{v[p.id]=t.value;schedule(250);};
+  }else if(p.type==='text'){
+    row.innerHTML=`<label for="${id}">${p.label}</label><input type="text" id="${id}" maxlength="${p.maxlength||24}" spellcheck="false" value="${esc(v[p.id])}">${p.hint?`<span class="hint">${esc(p.hint)}</span>`:''}`;
+    const t=row.querySelector('input');t.oninput=()=>{v[p.id]=t.value;schedule(250);};
   }else if(p.type==='presets'){
     row.innerHTML=`<div class="presets">${p.items.map((it,i)=>`<button class="chip" data-i="${i}">${it.label}</button>`).join('')}</div>`;
     row.querySelectorAll('button').forEach(b=>b.onclick=()=>{Object.assign(v,p.items[+b.dataset.i].set);S.needFit=true;renderParams();schedule(0);});
@@ -255,6 +258,15 @@ dlBtn.onclick=async()=>{
     }
   }finally{dlBtn.disabled=false;}
 };
+
+/* ---------- troubleshooting help modal ---------- */
+const helpBtn=$('#helpBtn'),helpModal=$('#helpModal'),helpX=$('#helpX');
+function helpKey(e){if(e.key==='Escape')closeHelp();}
+function openHelp(){helpModal.hidden=false;document.addEventListener('keydown',helpKey);helpX.focus();}
+function closeHelp(){helpModal.hidden=true;document.removeEventListener('keydown',helpKey);helpBtn.focus();}
+helpBtn.onclick=openHelp;
+helpX.onclick=closeHelp;
+helpModal.addEventListener('mousedown',e=>{if(e.target===helpModal)closeHelp();});
 
 function refreshTheme(){buildPlate();}
 const narrowMQ=window.matchMedia('(max-width:860px)');

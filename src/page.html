@@ -123,6 +123,28 @@ textarea{resize:vertical;min-height:62px}
 .stats .pill{margin-left:auto}
 .hint{font-size:11.5px;color:var(--muted)}
 .mtools{display:none}
+.help-btn{border:1px solid var(--line);background:var(--panel-2);border-radius:999px;width:28px;height:28px;padding:0;cursor:pointer;font-weight:700;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center}
+.help-btn:hover{border-color:var(--muted)}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);width:100%;max-width:640px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.modal-head h2{margin:0;font-size:17px;font-weight:800;font-stretch:112%}
+.modal-head p{margin:4px 0 0;color:var(--muted);font-size:12.5px}
+.modal-x{background:none;border:0;color:inherit;cursor:pointer;font-size:16px;font-weight:700;padding:2px 6px;border-radius:6px;flex:none}
+.modal-x:hover{background:var(--panel-2)}
+.modal-body{padding:8px 18px 18px;overflow:auto}
+.th-item{border-bottom:1px solid var(--line);padding:4px 0}
+.th-item:last-child{border-bottom:0}
+.th-item>summary{cursor:pointer;list-style:none;padding:10px 2px;font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.th-item>summary::-webkit-details-marker{display:none}
+.th-item>summary::before{content:"+";color:var(--accent);font-weight:800;width:16px;text-align:center;flex:none}
+.th-item[open]>summary::before{content:"−"}
+.th-item .th-body{padding:0 2px 12px 26px;font-size:13px;line-height:1.55;color:var(--ink)}
+.th-item .th-body h4{margin:10px 0 4px;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.th-item .th-body h4:first-child{margin-top:0}
+.th-item .th-body ul{margin:0;padding-left:18px}
+.th-item .th-body li{margin:2px 0}
 
 @media (max-width:860px){
   html,body{height:auto}
@@ -164,6 +186,7 @@ textarea{resize:vertical;min-height:62px}
           <select id="printer" aria-label="Printer bed"></select>
           <div class="swatches" id="swatches" role="group" aria-label="Filament color"></div>
           <button id="dl" class="primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span>Download STL</span></button>
+          <button id="helpBtn" class="help-btn" aria-haspopup="dialog" aria-controls="helpModal" title="Print troubleshooting guide" aria-label="Print troubleshooting guide">?</button>
         </div>
       </div>
       <div class="busy" id="busy" hidden>Generating</div>
@@ -173,4 +196,147 @@ textarea{resize:vertical;min-height:62px}
     <div class="stats" id="stats"></div>
     <div class="mtools" id="mtools" aria-label="Printer and filament"></div>
   </main>
+</div>
+
+<div class="modal-overlay" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <div><h2 id="helpTitle">3D printing troubleshooting</h2><p>Common FDM print problems and what usually fixes them. Not specific to any model here — this applies to prints from any slicer.</p></div>
+      <button class="modal-x" id="helpX" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <details class="th-item">
+        <summary>Warping &amp; lifting corners</summary>
+        <div class="th-body">
+          <h4>Looks like</h4>
+          <ul><li>Corners or edges curl up off the bed as printing continues</li></ul>
+          <h4>Likely causes</h4>
+          <ul><li>Bed too cold, or uneven heating across the bed</li><li>Drafts or AC/fan airflow cooling one side of the part faster</li><li>Material shrinks as it cools (ABS, PETG and nylon are worse than PLA)</li></ul>
+          <h4>Try</h4>
+          <ul><li>Raise bed temperature a few degrees and make sure it's fully preheated before starting</li><li>Use an enclosure or draft shield; close windows/doors near the printer</li><li>Add a brim or raft for more edge adhesion</li><li>Avoid sharp 90° corners in the design where possible; a fillet reduces warping stress</li></ul>
+        </div>
+      </details>
+      <details class="th-item">
+        <summary>Poor first-layer adhesion</summary>
+        <div class="th-body">
+          <h4>Looks like</h4>
+          <ul><li>Print detaches from the bed partway through, or the first layer looks patchy/stringy instead of smooth</li></ul>
+          <h4>Likely causes</h4>
+          <ul><li>Nozzle too far from (or too close to) the bed</li><li>Bed not level, or not clean (oils, dust)</li><li>Bed temperature too low for the material, or no adhesion aid used</li></ul>
+          <h4>Try</h4>
+          <ul><li>Re-level the bed and recalibrate the first-layer (Z-offset/live-leveling) height</li><li>Clean the bed with isopropyl alcohol between prints</li><li>Use a glue stick, hairspray, or PEI/textured sheet suited to the material</li><li>Slow down the first layer and increase first-layer line width slightly in the slicer</li></ul>
+        </div>
+      </details>
+      <details class="th-item">
+        <summary>Stringing &amp; oozing</summary>
+        <div class="th-body">
+          <h4>Looks like</h4>
+          <ul><li>Thin hair-like strands of plastic between separate parts of the print, especially after travel moves</li></ul>
+          <h4>Likely causes</h4>
+          <ul><li>Nozzle temperature too high, so filament drips while traveling</li><li>Retraction distance/speed too low, or disabled</li><li>Filament has absorbed moisture</li></ul>
+          <h4>Try</h4>
+          <ul><li>Lower the nozzle temperature in 5°C steps until stringing clears up</li><li>Increase retraction distance and speed (direct-drive extruders need far less retraction than Bowden setups)</li><li>Turn on "combing"/avoid-crossing-perimeters travel options in the slicer</li><li>Dry the filament (a food dehydrator or filament dryer, 4–8h) if it's been exposed to humid air</li></ul>
+        </div>
+      </details>
+      <details class="th-item">
+        <summary>Layer shifting</summary>
+        <div class="th-body">
+          <h4>Looks like</h4>
+          <ul><li>Layers suddenly offset sideways partway up the print, like the top half slid over</li></ul>
+          <h4>Likely causes</h4>
+          <ul><li>Belts loose or skipping on a pulley</li><li>Print speed/acceleration too high for the printer, causing motors to skip steps</li><li>Something physically snagging the print head (a cable, a tall thin part, a wipe tower)</li></ul>
+          <h4>Try</h4>
+          <ul><li>Check belt tension and pulley set-screws on X and Y axes</li><li>Lower print speed and acceleration, especially for tall or detailed models</li><li>Make sure cables can move freely through their full range and nothing overhangs into the gantry's path</li></ul>
+        </div>
+      </details>
+      <details class="th-item">
+        <summary>Under-extrusion (gaps, weak or missing lines)</summary>
+        <div class="th-body">
+          <h4>Looks like</h4>
+          <ul><li>Visible gaps between lines, patchy top surfaces, or layers that look thin/starved of plastic</li></ul>
+          <h4>Likely causes</h4>
+          <ul><li>Partially clogged nozzle, or worn extruder gear not gripping filament</li><li>Flow rate or filament diameter set incorrectly in the slicer</li><li>Nozzle temperature too low for the material to flow properly</li></ul>
+          <h4>Try</h4>
+          <ul><li>Run a cold pull or needle-clean the nozzle; check the filament diameter with calipers against the slicer setting</li><li>Increase flow rate a few percent, or raise nozzle temperature slightly</li><li>Check the extruder idler tension — too loose and the gear slips, too tight and it can grind through the filament</li></ul>
+        </div>
+      </details>
+      <details class="th-item">
+        <summary>Over-extrusion (blobs, rough or oversized surfaces)</summary>
+        <div class="th-body">
+          <h4>Looks like</h4>
+          <ul><li>Bumpy, blobby surfaces; parts measuring slightly larger than designed; seams that bulge</li></ul>
+          <h4>Likely causes</h4>
+          <ul><li>Flow rate set too high</li><li>Filament diameter in the slicer doesn't match the actual filament</li><li>E-steps miscalibrated on the extruder</li></ul>
+          <h4>Try</h4>
+          <ul><li>Lower flow rate in small steps (try 95-98% first)</li><li>Measure the actual filament diameter and update the slicer setting</li><li>Run an extruder calibration (mark filament, extrude 100mm commanded, measure what actually fed through)</li></ul>
+        </div>
+      </details>
+      <details class="th-item">
+        <summary>Elephant's foot (bulging first layers)</summary>
+        <div class="th-body">
+          <h4>Looks like</h4>
+          <ul><li>The bottom few layers bulge outward slightly compared to the rest of the part, so it doesn't sit flush against mating parts</li></ul>
+          <h4>Likely causes</h4>
+          <ul><li>Bed too hot or nozzle too close, squashing the first layers under the weight of the part above</li></ul>
+          <h4>Try</h4>
+          <ul><li>Reduce bed temperature slightly, or the first-layer height/Z-offset</li><li>Enable "elephant foot compensation" in the slicer if it's available — it tapers the bottom layers inward slightly to cancel the bulge</li></ul>
+        </div>
+      </details>
+      <details class="th-item">
+        <summary>Clogged or jammed nozzle</summary>
+        <div class="th-body">
+          <h4>Looks like</h4>
+          <ul><li>Extruder motor clicking, no filament coming out, or filament grinding into a flat spot and no longer feeding</li></ul>
+          <h4>Likely causes</h4>
+          <ul><li>Debris or burnt (carbonized) filament stuck in the nozzle or heat-break</li><li>Printing too cool for the material, so it doesn't melt fully</li><li>Retraction settings too aggressive, pulling molten filament back into a cooler part of the hotend where it solidifies</li></ul>
+          <h4>Try</h4>
+          <ul><li>Do a cold pull: heat to printing temp, then let it cool a little and firmly pull the filament out to drag debris with it; repeat until it comes out clean</li><li>Use a cleaning filament or needle to clear the nozzle tip</li><li>Check that retraction distance isn't excessive for the hotend type (Bowden vs. direct-drive)</li></ul>
+        </div>
+      </details>
+      <details class="th-item">
+        <summary>Weak layer bonding / parts snap apart along layer lines</summary>
+        <div class="th-body">
+          <h4>Looks like</h4>
+          <ul><li>The part breaks cleanly along a layer boundary with little force, even though the walls look fine</li></ul>
+          <h4>Likely causes</h4>
+          <ul><li>Nozzle temperature too low for good layer fusion</li><li>Print cooling fan blowing too hard too early, chilling each layer before the next bonds to it</li><li>Print speed too fast for the material to fuse properly</li></ul>
+          <h4>Try</h4>
+          <ul><li>Raise nozzle temperature a little</li><li>Reduce part-cooling fan speed, especially for the first several layers</li><li>Slow down print speed, particularly on outer walls</li></ul>
+        </div>
+      </details>
+      <details class="th-item">
+        <summary>Rough or gappy top surfaces (pillowing)</summary>
+        <div class="th-body">
+          <h4>Looks like</h4>
+          <ul><li>The top of a flat area looks bubbly, has small holes, or sags between infill lines</li></ul>
+          <h4>Likely causes</h4>
+          <ul><li>Not enough top solid layers to fully bridge over the infill pattern</li><li>Cooling fan too weak on top layers, so each one sags before it sets</li><li>Infill density/pattern leaves gaps too wide to bridge cleanly</li></ul>
+          <h4>Try</h4>
+          <ul><li>Increase top solid layer count (often 4-6 for a 0.2mm layer height)</li><li>Increase cooling fan speed for top layers specifically</li><li>Raise infill density, or switch to a grid/gyroid pattern with tighter spacing</li></ul>
+        </div>
+      </details>
+      <details class="th-item">
+        <summary>Z-banding / ringing (wavy surface texture)</summary>
+        <div class="th-body">
+          <h4>Looks like</h4>
+          <ul><li>Regular horizontal wavy bands up the side of the print, or ghosting/echoes near sharp corners</li></ul>
+          <h4>Likely causes</h4>
+          <ul><li>Z-axis lead screw/rod wobble or a loose coupler</li><li>Print speed and acceleration too high, causing the frame to vibrate (ringing specifically)</li><li>Loose belts or a gantry that isn't rigid</li></ul>
+          <h4>Try</h4>
+          <ul><li>Check the Z-axis coupler and lead screw for play; add an anti-backlash nut if needed</li><li>Lower acceleration/jerk settings, or enable input shaping if the firmware supports it</li><li>Tighten belts and frame fasteners</li></ul>
+        </div>
+      </details>
+      <details class="th-item">
+        <summary>Mesh errors in the slicer ("non-manifold", holes, inverted faces)</summary>
+        <div class="th-body">
+          <h4>Looks like</h4>
+          <ul><li>The slicer flags the model with warnings about open surfaces or errors, or the preview shows missing faces</li></ul>
+          <h4>Likely causes</h4>
+          <ul><li>The STL has gaps, duplicate/overlapping geometry, or inconsistent face normals — common after exporting from CAD tools, mesh editors, or a buggy export step</li></ul>
+          <h4>Try</h4>
+          <ul><li>Most slicers (Cura, PrusaSlicer, Bambu Studio) auto-repair small mesh errors on load — check if the preview actually looks solid despite the warning before worrying further</li><li>Run the file through a dedicated repair tool (Windows 3D Builder, Meshmixer, or Netfabb's online fixer) if slices come out visibly broken</li><li>Re-export the STL from the original source at a finer tolerance if repair doesn't help</li></ul>
+        </div>
+      </details>
+    </div>
+  </div>
 </div>

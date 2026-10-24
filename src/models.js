@@ -123,7 +123,8 @@ const CATS=[
   {id:'text',label:'Text',icon:'<path d="M5 7V4h14v3M12 4v16M9 20h6"/>'},
   {id:'storage',label:'Storage',icon:'<path d="M3 8l9-4 9 4v9l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v9"/>'},
   {id:'mech',label:'Mechanical',icon:'<circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="6.5"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>'},
-  {id:'deco',label:'Decorative',icon:'<path d="M9 3h6M10 3c0 3-4 5-4 10a6 6 0 0012 0c0-5-4-7-4-10"/><path d="M8 21h8"/>'}
+  {id:'deco',label:'Decorative',icon:'<path d="M9 3h6M10 3c0 3-4 5-4 10a6 6 0 0012 0c0-5-4-7-4-10"/><path d="M8 21h8"/>'},
+  {id:'music',label:'Music',icon:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'}
 ];
 
 const R=(id,label,min,max,step,value,unit,extra={})=>({id,label,type:'range',min,max,step,value,unit,...extra});
@@ -497,6 +498,61 @@ const MODELS=[
   if(p.shape!=='square'){mask=new Uint8Array(n*n);for(let j=0;j<n;j++)for(let i=0;i<n;i++)mask[j*n+i]=shapeTest(p.shape,(i+.5)/n,(j+.5)/n)?1:0;}
   await tick();
   return {shells:[heightfieldSolid(n,n,c,H,mask)],notes:[['Colour swap at',`Z ${fmt(p.base,2)} mm`],['Grid',`${n} × ${n} @ ${fmt(c,2)} mm`]],file:`coaster-${p.pattern}`};
+ }},
+
+/* ---------------- Music ---------------- */
+{id:'pick',cat:'music',name:'Guitar pick',
+ tip:'<b>Print tip:</b> print flat on the bed, 100% infill. PETG or tough PLA print a stiff pick; flexible TPU filament prints a softer, grippier one.',
+ params:[
+  {id:'presets',type:'presets',group:'Presets',items:[
+    {label:'351 Standard',set:{shape:'teardrop',size:28,point:0.5,gauge:1.2}},
+    {label:'Jazz (small)',set:{shape:'teardrop',size:22,point:0.72,gauge:1.5}},
+    {label:'Triangle',set:{shape:'triangle',size:30,point:0.28,gauge:1.2}},
+    {label:'Bass (large)',set:{shape:'teardrop',size:38,point:0.38,gauge:1.8}}
+  ]},
+  SEL('shape','Shape',[['teardrop','Teardrop'],['triangle','Triangle (3-point)']],'teardrop',{group:'Shape'}),
+  R('size','Size',18,45,0.5,28,'mm'),
+  R('point','Point sharpness',0.1,0.88,0.02,0.5,''),
+  R('gauge','Thickness (gauge)',0.3,3,0.05,1.2,'mm',{group:'Body'}),
+  CHK('bevel','Rounded edge (comfort bevel)',true),
+  {id:'label',label:'Custom label (optional)',type:'text',value:'',maxlength:8,hint:'Keep it short — 2–4 letters fits best.',group:'Label'},
+  SEL('labelFont','Label font',Object.entries(FONTS).map(([k,f])=>[k,f.label]),'archivo'),
+  R('labelSize','Label size',2,8,0.2,3.5,'mm')
+ ],
+ async build(p){
+  const k=clamp(p.point,0.05,0.88),segs=260;
+  const L=p.shape==='triangle'
+    ?lobeShape(Math.max(p.size,12)/2,lerp(0.18,0.5,clamp((k-0.1)/0.78,0,1)),3,segs)
+    :teardropShape(Math.max(p.size,14),k,segs);
+  const bevelSize=p.bevel?Math.min(0.35,p.gauge*0.3):0;
+  const sh=[extrude(L.shape,0,p.gauge,segs,p.bevel?{thickness:bevelSize,size:bevelSize,segments:3}:null)];
+  const notes=[['Size',`${fmt(L.maxX-L.minX)} × ${fmt(L.maxY-L.minY)} mm`],['Gauge',`${fmt(p.gauge,2)} mm`]];
+  const label=(p.label||'').trim();
+  if(label){
+   const f=FONTS[p.labelFont]||FONTS.archivo,fam=`${f.weight} {S}px "${f.family}", "Arial Black", sans-serif`;
+   try{await document.fonts.load(fam.replace('{S}',64),label);}catch(e){}
+   const mc=document.createElement('canvas').getContext('2d');mc.font=fam.replace('{S}',100);
+   const textW=Math.max(1,mc.measureText(label).width/100*p.labelSize);
+   const padL=p.labelSize*0.7,Wc0=textW+2*padL,Hc0=p.labelSize*1.8;
+   const cell=Math.max(0.12,p.labelSize/16),nx=Math.max(6,Math.round(Wc0/cell)),ny=Math.max(4,Math.round(Hc0/cell));
+   const Wc=nx*cell,Hc=ny*cell;
+   const cv=document.createElement('canvas');cv.width=nx;cv.height=ny;const x=cv.getContext('2d',{willReadFrequently:true});
+   x.setTransform(1/cell,0,0,1/cell,0,0);x.fillStyle='#fff';x.font=fam.replace('{S}',p.labelSize);x.textAlign='center';x.textBaseline='middle';
+   x.fillText(label,Wc/2,Hc/2+p.labelSize*0.04);
+   const md=x.getImageData(0,0,nx,ny).data,mask=new Uint8Array(nx*ny);
+   let any=false;
+   for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const on=md[((ny-1-j)*nx+i)*4+3]>110;mask[j*nx+i]=on?1:0;if(on)any=true;}
+   if(any){
+    const depth=clamp(p.gauge*0.4,0.25,0.6);
+    const Hh=new Float32Array((nx+1)*(ny+1)).fill(depth);
+    const letterTris=heightfieldSolid(nx,ny,cell,Hh,mask);
+    const inset=Math.min(2.5,(L.maxY-L.minY)*0.07),targetY=L.maxY-Hc-inset;
+    transformTris(letterTris,q=>{q[0]+=-Wc/2;q[1]+=targetY;q[2]+=p.gauge-0.02;});
+    sh.push(letterTris);
+    notes.push(['Label',label]);
+   }
+  }
+  return {shells:sh,notes,file:'guitar-pick-'+(p.shape==='triangle'?'tri':'teardrop')+(label?'-'+slug(label):'')};
  }}
 ];
 const MODEL_BY_ID=Object.fromEntries(MODELS.map(m=>[m.id,m]));
